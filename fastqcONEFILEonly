@@ -1,0 +1,27 @@
+#!/bin/sh
+source /opt/asn/etc/asn-bash-profiles-special/modules.sh
+module load fastqc/0.10.1
+
+###Script to run FastQC on ONE FILE only###
+### script used on the Alabama supercomputer
+
+######  make a directory in SCRATCH for processing the data
+mkdir /scratch/aubcls11/rnaseq_males/fastqc
+
+### Change directory to the scratch directory
+cd /scratch/aubcls11/rnaseq_males/fastqc
+
+###  copy data from original file to the scratch directory (here =  . )for processing
+cp /scratch/aubcls11/rnaseq_males/raw_data/SU_1703/SU_1703_USR16088798L_HHHKJBBXX_L7_1.fq.gz .
+
+### FastQC: run on the data file to check the quality of the data
+### The output from this analysis is a folder of results and a zipped file of results
+fastqc SU_1703_USR16088798L_HHHKJBBXX_L7_1.fq.gz
+
+##### Make a directory for my results in my home folder
+# mkdir /home/YOUR_ID/class_shared/YOUR_NAME/fastqc
+mkdir /home/aubcls11/class_shared/Dasia/fastqcRNAseq
+
+### Move the results output to my directory for safe keeping
+# mv *.fastqc.zip /home/YOUR_ID/class_shared/YOUR_NAME/fastqc
+mv *fastqc.zip /home/aubcls11/class_shared/Dasia/fastqcRNAseq
