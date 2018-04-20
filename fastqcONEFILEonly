@@ -25,3 +25,4 @@ mkdir /home/aubcls11/class_shared/Dasia/fastqcRNAseq
 ### Move the results output to my directory for safe keeping
 # mv *.fastqc.zip /home/YOUR_ID/class_shared/YOUR_NAME/fastqc
 mv *fastqc.zip /home/aubcls11/class_shared/Dasia/fastqcRNAseq
+#### This script was made to run FASTQC on the alabama supercomputer .....using only one file of RNA-seq data 
