@@ -1,0 +1,67 @@
+#!/bin/sh
+source /opt/asn/etc/asn-bash-profiles-special/modules.sh
+module load fastqc/0.10.1
+module load trimmomatic/0.35
+module load gnu_parallel/201612222
+## Recommended submission:
+        # 6 cores
+        # 2 hours
+        # 16gb
+###ORGINAL SCRIPT 
+######  remove any the targeted scratch directory and any files within
+#rm -r /scratch/aubcls11/QualTrimOne
+
+mkdir /scratch/aubcls11/rnaseq_males/cleanData
+### Change directory to the scratch directory
+# cd /scratch/YOUR_ID/fastqc
+cd /scratch/aubcls11/rnaseq_males/cleanData
+
+#####   copy all .fastq.gz to  scratch directory in parallel using GNU parallel
+#  ls = make a (memory) list of the .fastq.gz files in that directory
+#  | in parallel using as many cores as possible (one job on each core) but no more jobs, c$
+# options: -- eta give the estimate time --dry-run to see if being parsed correctly
+# You can do this seperately for the files you need to run using this code from before chan$
+
+#####MAUNALLY COPY ALL FILES ###
+cp /scratch/aubcls11/rnaseq_males/fastqc/SU_1703_USR16088798L_HHHKJBBXX_L7_1.fq.gz .
+cp /scratch/aubcls11/rnaseq_males/fastqc/SU_1703_USR16088798L_HHHKJBBXX_L7_2.fq.gz .
+
+## unzip in parallel. List all the * .gz files and run on as many jobs as cores (-j) as and$
+#ls *fq.gz |time parallel -j+0 'gunzip {}'
+
+#### Make the list then use that list to Concatenate Forward Read (R1)files in parallel (Th$
+## parallel is GNU parallel
+#ls | grep ".fq.gz" |cut -d "_" -f 1,2 | sort | uniq | parallel cat {1}_L00*_R1_*.fastq '>' {1}_All_R1.fastq ::: ${i}
+##### Concatenate Reverse Reads (R2) files
+#ls | grep ".fq" |cut -d "_" -f 1,2 | sort | uniq | parallel cat {1}_L00*_R2_*.fastq '>' {1}_All_R2.fastq ::: ${i}
+
+##  Run fastqc on the All files in parallel
+ls *.fq.gz | time parallel -j+0 --eta 'fastqc {}'
+#ls *L1_2.fq.gz | time parallel -j+0 --eta 'fastqc {}'
+
+
+# copy over the fasta file with the adapter file to use for screening
+cp /home/aubcls11/class_shared/code/AdaptersToTrim.fa .
+
+#### Create list of names (see above for description) and put into file called list.
+ls | grep ".fq.gz" |cut -d "_" -f 1,2,3,4,5 | sort | uniq > list
+
+### while loop to process through the names in the list
+while read i
+do
+
+############ Trimmomatic #############
+############  Trim read for quality when quality drops below Q30 and remove sequences short$
+#MINLEN:<length> #length: Specifies the minimum length of reads to be kept.
+#SLIDINGWINDOW:<windowSize>:<requiredQuality>  #windowSize: specifies the number of bases t$
+#requiredQuality: specifies the average quality required.
+# -threads  is the option to define the number of threads (cores) to use.
+        #For this to be effective you need to request those cores at submission
+# ON HOPPER: trimmomatic-0.36
+
+java -jar /opt/asn/apps/trimmomatic_0.35/Trimmomatic-0.35/trimmomatic-0.35.jar PE -threads 6 -phred33 "$i"_1.fq.gz "$i"_2.fq.gz "$i"_1_paired_threads.fq.gz "$i"_1_unpaired_threads.fq.gz "$i"_2_paired_threads.fq.gz "$i"_2_unpaired_threads.fq.gz ILLUMINACLIP:AdaptersToTrim.fa:2:30:10 HEADCROP:10 LEADING:30 TRAILING:30 SLIDINGWINDOW:6:30 MINLEN:36
+
+done<list
+
+###Assess quality again with clean data 
+ls *paired_threads.fq.gz | time parallel -j+0 --eta 'fastqc {}'
