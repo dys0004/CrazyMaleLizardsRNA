@@ -1,0 +1,100 @@
+#!/bin/sh
+
+#######################################################
+#################### MAP USING HISAT2 #################
+#######################################################
+
+source /opt/asn/etc/asn-bash-profiles-special/modules.sh
+## Load HISAT2 for mapping
+module load hisat2/2.0.5
+## Load SAMTOOLS: convert .sam files into .bam files
+module load samtools/1.2
+## Load STRINGTIE, GFFREAD, and GFFCOMPARE for annotations
+module load stringtie/1.3.3
+module load gffread
+module load gffcompare/
+
+
+## Make working folder and move into that folder
+mkdir /home/class_shared/Dasia/RNAmaleHisat
+mkdir /scratch/aubcls11/rnaseq_males/RNAmapping
+cd /scratch/aubcls11/rnaseq_males/RNAmapping
+
+## Copy files and move into working directory
+# Cleaned and paired .fastq files
+cp /scratch/aubcls11/rnaseq_males/cleanData/*_paired_threads.fq.gz .
+
+# Python stript to convert files
+cp /scratch/aubcls11/rnaseq_males/PrepDE.py .
+
+# Reference genome
+cp /scratch/aubcls11/rnaseq_males/jelly.out.fasta .
+
+## Check for corruption while transferring!!
+
+
+## Index reference genome
+hisat2-build jelly.out.fasta MalesRNA_index 
+
+## List all files and filter for files containing "_paired_threads.fq.gz"
+	# Cut the file name using "_" as a delimiter
+	# Create prefix using first 2 words of file
+	# Sort by name and keep uniq files
+	# Write to files
+#ls | grep "_paired_threads.fq.gz" |cut -d "_" -f 1,2,3,4,5| sort | uniq > files
+
+## Loop though each line in "files"
+	
+while read i;
+do 
+	## Map R1 and R2 files using HISAT2 (In: *_R1_paired.fastq and *_R2_paired.fastq | Out: *.sam)
+		# Using genome index file prefix TCO_index
+		# -1: forward file; -2: reverse file
+		#hisat2 -p <#thread> --dta -x <ref gen index heading> -1 R1.fq -2 R2.fq -S <output .sam file>
+
+	hisat2 -p 20 --dta -x MalesRNA_index  -1 ${i}_1_paired_threads.fq.gz -2 ${i}_2_paired_threads.fq.gz -S ${i}.sam
+
+	## convert .sam to .bam (In: E2_CG.sam | Out: E2_CG_sorted.bam)
+	## sort alignments
+		# -@ = number of threads
+	samtools sort -@ 12 -o ${i}_sorted.bam ${i}.sam
+
+done<files
+
+#remove intermed sam files
+#rm *.sam
+
+## Loop though each line in "files"
+	# example: i = C2_CCAGTT
+while read i;
+do
+	## Assemble and quantify expressed genes and transcripts
+	stringtie -p 20 -l -o ${i}.gtf ${i}_STRNG ${i}_sorted.bam 
+
+done<files
+
+## Make list to be merged in next step (In: *.gtf | Out: mergelist.txt)
+ls | grep ".gtf" | sort | uniq > mergelist.txt
+
+#merge all annotations into one annotation file 
+## Merge transcripts from all samples (In: mergelist.txt and reference.gtf | Out: stringtie_merged.gtf)
+stringtie --merge -p 20 -o stringtie_merged.gtf mergelist.txt
+
+## Loop though each line in "files"
+	# example: i = C2_CCAGTT
+while read i;
+do
+	## Estimate transcript abundances and create table counts for Ballgown
+	stringtie -e -B -p 20 -G stringtie_merged.gtf -o scratch/aubcls11/rnaseq_males/RNAmapping/ballgown/${i}/${i}.gtf ${i}_sorted.bam
+
+done<files
+
+## Convert Ballgown output to generate count files that are readable for edgeR
+#mv ballgown/ ballgown/
+python PrepDE.py
+
+#Tarball and move to home folder
+tar czvf hisat.tar.gz transcript_count_matrix.csv gene_count_matrix.csv stringtie_merged.gtf
+cp hisat.tar.gz /home/class_shared/Dasia/RNAmaleHisat
+
+
