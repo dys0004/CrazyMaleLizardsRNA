@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# ----------------QSUB Parameters----------------- #
+##choose queue
+####PBS -q
+##list - node are nodes: ppn are cpus per node: walltime=walltime
+#PBS -l nodes=1:ppn=1,mem=2gb,walltime=24:00:00
+##email
+#PBS -M dys0004@tigermail.auburn.edu
+##send email abort; begin; end
+#PBS -m ae
+##job name
+#PBS -N fastqc_RNAmale1703foward 
+##combine standard out and standard error
+#PBS -j oe
+# ----------------Load Modules-------------------- #
+module load fastqc/11.5
+#-----------------Define variables------------#
+
+# ----------------Commands------------------- #
+
+###Script to run FastQC on ONE FILE only###
+### script used on the Alabama supercomputer
+
+######  make a directory in SCRATCH for processing the data
+mkdir /scratch/ReptileTrinityDYS/RNAmaleStress/FastQC_Dirty_Reads
+
+### Change directory to the scratch directory
+cd /scratch/ReptileTrinityDYS/RNAmaleStress/FastQC_Dirty_Reads
+
+###  copy data from original file to the scratch directory (here =  . )for processing
+cp /scratch/ReptileTrinityDYS/RNAmaleStress/raw_data/SU_1703/SU_1703_USR16088798L_HHHKJBBXX_L7_1.fq.gz .
+
+### FastQC: run on the data file to check the quality of the data
+### The output from this analysis is a folder of results and a zipped file of results
+fastqc SU_1703_USR16088798L_HHHKJBBXX_L7_1.fq.gz
+
+## This script was made to be used on Auburn University Hopper
+## The purpose of this script is to run fastQC 
