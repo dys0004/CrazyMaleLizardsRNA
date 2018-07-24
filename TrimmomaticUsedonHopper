@@ -23,6 +23,7 @@ module load gnu-parallel/20160322
 ####This script puts all the files in one directory...not the best but effective!!
 #### This script can run fastqc before and after trimmomatic but in this case i just did it after using trimmomatic 
 #### only used 1 forward read and 1 reverse read
+###REMEMBER trimmomatic produces four files!!!!! paired forward,paired reverse, unpaired forward, unpaired reverse 
 
 ### Change directory to the scratch directory
 cd /scratch/ReptileTrinityDYS/RNAmaleStress/Clean_Reads
