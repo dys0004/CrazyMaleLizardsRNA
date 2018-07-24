@@ -1,0 +1,64 @@
+#!/bin/bash
+
+# ----------------QSUB Parameters----------------- #
+##choose queue
+####PBS -q
+##list - node are nodes: ppn are cpus per node: walltime=walltime
+#PBS -l nodes=2:ppn=20,mem=16gb,walltime=03:00:00:00
+##email
+#PBS -M dys0004@tigermail.auburn.edu
+##send email abort; begin; end
+#PBS -m ae
+##job name
+#PBS -N Trimmomatic1703_July17th_2018_test25
+##combine standard out and standard error
+#PBS -j oe
+
+# ----------------Load Modules-------------------- #
+module load fastqc/11.5
+module load trimmomatic/0.37
+module load gnu-parallel/20160322
+
+
+####This script puts all the files in one directory...not the best but effective!!
+#### This script can run fastqc before and after trimmomatic but in this case i just did it after using trimmomatic 
+#### only used 1 forward read and 1 reverse read
+
+### Change directory to the scratch directory
+cd /scratch/ReptileTrinityDYS/RNAmaleStress/Clean_Reads
+
+
+#####MAUNALLY COPY ALL FILES ###
+cp /scratch/ReptileTrinityDYS/RNAmaleStress/raw_data/SU_1775/SU_1775_USR16088815L_HHHWNBBXX_L1_1.fq.gz .
+cp /scratch/ReptileTrinityDYS/RNAmaleStress/raw_data/SU_1775/SU_1775_USR16088815L_HHHWNBBXX_L1_2.fq.gz .
+
+##  Run fastqc on the All files in parallel
+
+#ls *.fq.gz | time parallel -j+0 --eta 'fastqc {}'
+#ls *L1_2.fq.gz | time parallel -j+0 --eta 'fastqc {}'
+
+###  Unzip the data
+#gunzip ${lizardID}*.fq.gz
+
+####### Define Variables #######
+lizardID="SU_1775_USR16088815L_HHHWNBBXX_L1"
+
+###################################################
+#########Beginning of Trimommatic Script###########
+###################################################
+
+
+############ Trimmomatic #############
+############  Trim read for quality when quality drops below Q30 and remove sequences short$
+#MINLEN:<length> #length: Specifies the minimum length of reads to be kept.
+#SLIDINGWINDOW:<windowSize>:<requiredQuality>  #windowSize: specifies the number of bases t$
+#requiredQuality: specifies the average quality required.
+# -threads  is the option to define the number of threads (cores) to use.
+        #For this to be effective you need to request those cores at submission
+# ON HOPPER: trimmomatic-0.37
+
+java -jar /tools/trimmomatic-0.37/bin/trimmomatic.jar PE -phred33 ${lizardID}_1.fq.gz ${lizardID}_2.fq.gz ${lizardID}_1_paired_threads.fq.gz ${lizardID}_1_unpaired_threads.fq.gz ${lizardID}_2_paired_threads.fq.gz ${lizardID}_2_unpaired_threads.fq.gz ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 HEADCROP:10 LEADING:30 TRAILING:30 SLIDINGWINDOW:6:30 MINLEN:36
+
+
+###Assess quality again with clean data
+ls *paired_threads.fq.gz | time parallel -j+0 --eta 'fastqc {}'
